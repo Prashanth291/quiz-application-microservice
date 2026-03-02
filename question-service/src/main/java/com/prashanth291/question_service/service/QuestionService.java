@@ -108,7 +108,7 @@ public class QuestionService {
             int score = 0;
             for(Response response:responses){
                 int questionId = response.getId();
-                if(response.getResponse().equals(questionRepository.findById().get().getRight_answer())){
+                if(response.getResponse().equals(questionRepository.findById(questionId).get().getRight_answer())){
                     score++;
                 }
             }
