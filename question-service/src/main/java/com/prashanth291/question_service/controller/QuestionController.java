@@ -3,6 +3,8 @@ package com.prashanth291.question_service.controller;
 
 
 import com.prashanth291.question_service.model.Question;
+import com.prashanth291.question_service.model.QuestionWrapper;
+import com.prashanth291.question_service.model.Response;
 import com.prashanth291.question_service.service.QuestionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -55,6 +57,21 @@ public class QuestionController {
         return questionService.getQuestionsByCategory(category);
     }
 
+    @GetMapping("/generate")
+    public ResponseEntity<List<Integer>> getQuestionsForQuiz
+            (@RequestParam String category, @RequestParam Integer numQues){
+            return questionService.getQuestionsForQuiz(category,numQues);
+    }
+
+    @PostMapping("/getQuestions")
+    public ResponseEntity<List<QuestionWrapper>> getQuestionsFromId(@@RequestBody List<Integer> questionIds){
+        return questionService.getQuestionsFromId(questionIds);
+    }
+
+    @PostMapping("/get-score")
+    public ResponseEntity<Integer> calculateScore(@RequestBody List<Response> response){
+        return questionService.calculateScore(response);
+    }
     // Generate Quiz with rqst
     // Get Questions Based on (QuestionId)
     // get score
