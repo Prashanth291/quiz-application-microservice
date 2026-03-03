@@ -54,11 +54,11 @@ The application is decomposed into **three independently deployable services**, 
 
 **Service responsibilities:**
 
-| Service            | Port  | Role                                                                 |
-|--------------------|-------|----------------------------------------------------------------------|
-| Service Registry   | 8761  | Eureka Server — service registration and discovery                   |
-| Question Service   | 8080  | Manages questions (CRUD, category filtering, scoring, random selection) |
-| Quiz Service       | 8090  | Manages quizzes (creation, retrieval, submission) — delegates to Question Service via Feign |
+| Service          | Port | Role                                                                                        |
+| ---------------- | ---- | ------------------------------------------------------------------------------------------- |
+| Service Registry | 8761 | Eureka Server — service registration and discovery                                          |
+| Question Service | 8080 | Manages questions (CRUD, category filtering, scoring, random selection)                     |
+| Quiz Service     | 8090 | Manages quizzes (creation, retrieval, submission) — delegates to Question Service via Feign |
 
 **Inter-service communication:**  
 Quiz Service communicates with Question Service through **OpenFeign**, a declarative REST client. Service endpoints are resolved at runtime via **Eureka service discovery** — no hardcoded URLs.
@@ -71,15 +71,15 @@ The original [monolithic application](https://github.com/Prashanth291/quiz-appli
 
 ### What Changed
 
-| Aspect               | Monolith                                  | Microservices (this repo)                              |
-|----------------------|-------------------------------------------|--------------------------------------------------------|
-| **Deployment**       | Single JAR                                | 3 independent services, each with its own JAR          |
-| **Database**         | Single shared `question_db`               | Database per service (`question_db` + `quiz_db`)       |
-| **Communication**    | In-process method calls                   | REST calls via OpenFeign                               |
-| **Service Discovery**| N/A                                       | Netflix Eureka                                         |
-| **Quiz ↔ Question**  | Direct service-layer method invocation    | Feign client calling Question Service REST endpoints   |
-| **Quiz entity**      | Stored `List<Question>` (JPA `@ManyToMany`) | Stores `List<Integer>` question IDs (`@ElementCollection`) |
-| **Scalability**      | Scale entire app                          | Scale individual services independently                |
+| Aspect                | Monolith                                    | Microservices (this repo)                                  |
+| --------------------- | ------------------------------------------- | ---------------------------------------------------------- |
+| **Deployment**        | Single JAR                                  | 3 independent services, each with its own JAR              |
+| **Database**          | Single shared `question_db`                 | Database per service (`question_db` + `quiz_db`)           |
+| **Communication**     | In-process method calls                     | REST calls via OpenFeign                                   |
+| **Service Discovery** | N/A                                         | Netflix Eureka                                             |
+| **Quiz ↔ Question**   | Direct service-layer method invocation      | Feign client calling Question Service REST endpoints       |
+| **Quiz entity**       | Stored `List<Question>` (JPA `@ManyToMany`) | Stores `List<Integer>` question IDs (`@ElementCollection`) |
+| **Scalability**       | Scale entire app                            | Scale individual services independently                    |
 
 ### Steps Taken
 
@@ -97,18 +97,18 @@ The original [monolithic application](https://github.com/Prashanth291/quiz-appli
 
 ## Tech Stack
 
-| Component           | Technology                          |
-|---------------------|-------------------------------------|
-| Language            | Java 21                             |
-| Framework           | Spring Boot 3.2.5                   |
-| Cloud               | Spring Cloud 2023.0.1               |
-| Service Discovery   | Netflix Eureka                      |
-| Inter-Service Comm  | OpenFeign                           |
-| Web Layer           | Spring Web MVC                      |
-| Persistence         | Spring Data JPA / Hibernate         |
-| Database            | PostgreSQL (one per service)        |
-| Build Tool          | Maven                               |
-| Code Generation     | Lombok                              |
+| Component          | Technology                   |
+| ------------------ | ---------------------------- |
+| Language           | Java 21                      |
+| Framework          | Spring Boot 3.2.5            |
+| Cloud              | Spring Cloud 2023.0.1        |
+| Service Discovery  | Netflix Eureka               |
+| Inter-Service Comm | OpenFeign                    |
+| Web Layer          | Spring Web MVC               |
+| Persistence        | Spring Data JPA / Hibernate  |
+| Database           | PostgreSQL (one per service) |
+| Build Tool         | Maven                        |
+| Code Generation    | Lombok                       |
 
 ---
 
@@ -128,27 +128,27 @@ The original [monolithic application](https://github.com/Prashanth291/quiz-appli
 
 ### Question Service (`http://localhost:8080`)
 
-| Method | Endpoint                          | Description                              |
-|--------|-----------------------------------|------------------------------------------|
-| `GET`  | `/questions/allQuestions`          | Get all questions                        |
-| `GET`  | `/questions/question/{id}`        | Get a question by ID                     |
-| `POST` | `/questions/add-question`         | Add a new question                       |
-| `PUT`  | `/questions/update/{id}`          | Update an existing question              |
-| `DELETE`| `/questions/delete/{id}`         | Delete a question by ID                  |
-| `GET`  | `/questions/category/{category}`  | Get all questions in a category          |
-| `GET`  | `/questions/generate`             | Get random question IDs (params: `category`, `numQues`) |
-| `POST` | `/questions/getQuestions`         | Get questions by IDs (answers excluded)  |
-| `POST` | `/questions/get-score`            | Calculate score from submitted responses |
+| Method   | Endpoint                         | Description                                             |
+| -------- | -------------------------------- | ------------------------------------------------------- |
+| `GET`    | `/questions/allQuestions`        | Get all questions                                       |
+| `GET`    | `/questions/question/{id}`       | Get a question by ID                                    |
+| `POST`   | `/questions/add-question`        | Add a new question                                      |
+| `PUT`    | `/questions/update/{id}`         | Update an existing question                             |
+| `DELETE` | `/questions/delete/{id}`         | Delete a question by ID                                 |
+| `GET`    | `/questions/category/{category}` | Get all questions in a category                         |
+| `GET`    | `/questions/generate`            | Get random question IDs (params: `category`, `numQues`) |
+| `POST`   | `/questions/getQuestions`        | Get questions by IDs (answers excluded)                 |
+| `POST`   | `/questions/get-score`           | Calculate score from submitted responses                |
 
 > The last three endpoints (`/generate`, `/getQuestions`, `/get-score`) are **internal endpoints** used by Quiz Service via Feign. They were introduced during the microservices decomposition.
 
 ### Quiz Service (`http://localhost:8090`)
 
-| Method | Endpoint              | Description                                          |
-|--------|-----------------------|------------------------------------------------------|
-| `POST` | `/quiz/create`        | Create a quiz (body: `{category, numQues, title}`)   |
-| `GET`  | `/quiz/get-quiz/{id}` | Get quiz questions (answers excluded)                |
-| `POST` | `/quiz/submit/{id}`   | Submit responses and get score                       |
+| Method | Endpoint              | Description                                        |
+| ------ | --------------------- | -------------------------------------------------- |
+| `POST` | `/quiz/create`        | Create a quiz (body: `{category, numQues, title}`) |
+| `GET`  | `/quiz/get-quiz/{id}` | Get quiz questions (answers excluded)              |
+| `POST` | `/quiz/submit/{id}`   | Submit responses and get score                     |
 
 ---
 
@@ -202,6 +202,7 @@ quiz-application-microservice/
 │       └── resources/application.properties
 │
 └── screenshots/                             # API output screenshots
+    ├── Eureka.png
     ├── createQuiz.png
     ├── getQuestionsFromId.png
     └── calculateScore.png
@@ -281,6 +282,12 @@ cd quiz-service
 
 ## API Output Screenshots
 
+### Eureka Dashboard
+
+`http://localhost:8761` — Both services registered and running:
+
+![Eureka Dashboard](screenshots/Eureka.png)
+
 ### Create Quiz
 
 `POST /quiz/create`
@@ -344,15 +351,15 @@ Client                    Quiz Service                  Question Service
 
 ## Architectural Evolution: Monolith → Microservices
 
-| Concern              | Monolith                              | Microservices (this repo)                    |
-|----------------------|---------------------------------------|----------------------------------------------|
-| Deployment           | Single JAR                            | 3 independent JARs                           |
-| Database             | Single shared PostgreSQL DB           | Database per service                         |
-| Communication        | In-process method calls               | REST calls via OpenFeign                     |
-| Service Discovery    | N/A                                   | Netflix Eureka                               |
-| Coupling             | Tight — all modules share a process   | Loose — services interact via REST contracts |
-| Scalability          | Scale everything together             | Scale individual services independently      |
-| Fault Isolation      | Single point of failure               | Failure in one service doesn't crash others  |
+| Concern           | Monolith                            | Microservices (this repo)                    |
+| ----------------- | ----------------------------------- | -------------------------------------------- |
+| Deployment        | Single JAR                          | 3 independent JARs                           |
+| Database          | Single shared PostgreSQL DB         | Database per service                         |
+| Communication     | In-process method calls             | REST calls via OpenFeign                     |
+| Service Discovery | N/A                                 | Netflix Eureka                               |
+| Coupling          | Tight — all modules share a process | Loose — services interact via REST contracts |
+| Scalability       | Scale everything together           | Scale individual services independently      |
+| Fault Isolation   | Single point of failure             | Failure in one service doesn't crash others  |
 
 **Monolithic version:** [quiz-application-monolithic](https://github.com/Prashanth291/quiz-application-monolithic)  
-**Microservices version:** [quiz-application-microservice](https://github.com/Prashanth291/quiz-application-microservice) *(this repo)*
+**Microservices version:** [quiz-application-microservice](https://github.com/Prashanth291/quiz-application-microservice) _(this repo)_
