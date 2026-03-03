@@ -2,7 +2,8 @@ package com.prashanth291.quiz_service.controller;
 
 
 import com.prashanth291.quiz_service.model.QuestionWrapper;
-import com.prashanth291.quiz_service.model.QuizResponse;
+import com.prashanth291.quiz_service.model.QuizDto;
+import com.prashanth291.quiz_service.model.Response;
 import com.prashanth291.quiz_service.service.QuizService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -18,20 +19,22 @@ public class QuizController {
     private QuizService quizService;
 
     @PostMapping("/create")
-    public ResponseEntity<String> createQuiz(@RequestParam String category, @RequestParam int numQues, @RequestParam String title)
+    public ResponseEntity<String> createQuiz(@RequestBody QuizDto quizDto)
     {
-        return quizService.createQuiz(category, numQues, title);
+        return quizService.createQuiz(quizDto.getCategory(), quizDto.getNumQues(), quizDto.getTitle());
     }
 
     @GetMapping("/get-quiz/{id}")
     public ResponseEntity<List<QuestionWrapper>> getQuizById(@PathVariable Integer id)
     {
-        return quizService.getQuizById(id);
+        return quizService.getQuizQuestionsById(id);
     }
 
     @PostMapping("/submit/{id}")
-    public ResponseEntity<Integer> calculateScore(@PathVariable int id,@RequestBody List<QuizResponse> quizResponse)
+    public ResponseEntity<Integer> calculateScore(@PathVariable int id,@RequestBody List<Response> quizResponse)
     {
         return quizService.calculateScore(id,quizResponse);
     }
+
+
 }
