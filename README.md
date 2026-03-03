@@ -5,11 +5,12 @@
 ![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2023.0.1-6DB33F?logo=spring&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
 ![Eureka](https://img.shields.io/badge/Eureka-Service%20Discovery-FF6F00)
+![API Gateway](https://img.shields.io/badge/Spring%20Cloud-Gateway-6DB33F?logo=spring&logoColor=white)
 ![OpenFeign](https://img.shields.io/badge/OpenFeign-REST%20Client-009688)
 ![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36?logo=apachemaven&logoColor=white)
 ![REST API](https://img.shields.io/badge/REST-API-009688)
 
-A backend quiz management system built with **Spring Boot** and **Spring Cloud**, following a **microservices architecture**. The application handles question management, quiz creation, and quiz evaluation through independently deployable services that communicate via REST using OpenFeign and discover each other through Netflix Eureka.
+A backend quiz management system built with **Spring Boot** and **Spring Cloud**, following a **microservices architecture**. The application handles question management, quiz creation, and quiz evaluation through independently deployable services that communicate via REST using OpenFeign, discover each other through Netflix Eureka, and are accessed through a unified **Spring Cloud Gateway** entry point.
 
 This is the **microservices version** of the project, refactored from the original monolithic architecture.  
 The monolithic version is available [here](https://github.com/Prashanth291/quiz-application-monolithic).
@@ -18,38 +19,48 @@ The monolithic version is available [here](https://github.com/Prashanth291/quiz-
 
 ## Architecture
 
-The application is decomposed into **three independently deployable services**, each with a distinct responsibility:
+The application is decomposed into **four independently deployable services**, each with a distinct responsibility:
 
 ```
-                         ┌──────────────────────┐
-                         │   Service Registry    │
-                         │   (Eureka Server)     │
-                         │     Port: 8761        │
-                         └──────────┬───────────┘
-                            ▲               ▲
-                  registers │               │ registers
-                            │               │
-              ┌─────────────┴──┐     ┌──────┴──────────────┐
-              │  Quiz Service  │     │  Question Service    │
-              │  Port: 8090    │     │  Port: 8080          │
-              │                │     │                      │
-              │  ┌──────────┐  │     │  ┌───────────────┐   │
-              │  │Controller│  │     │  │  Controller    │   │
-              │  └────┬─────┘  │     │  └───────┬───────┘   │
-              │       │        │     │          │           │
-              │  ┌────▼─────┐  │     │  ┌───────▼───────┐   │
-              │  │ Service  │──╋─────╋─▶│   Service     │   │
-              │  └────┬─────┘  │Feign│  └───────┬───────┘   │
-              │       │        │     │          │           │
-              │  ┌────▼─────┐  │     │  ┌───────▼───────┐   │
-              │  │Repository│  │     │  │  Repository   │   │
-              │  └────┬─────┘  │     │  └───────┬───────┘   │
-              └───────┼────────┘     └──────────┼───────────┘
-                      │                         │
-               ┌──────▼──────┐          ┌───────▼───────┐
-               │ PostgreSQL  │          │  PostgreSQL   │
-               │  (quiz_db)  │          │ (question_db) │
-               └─────────────┘          └───────────────┘
+                       ┌──────────────────────┐
+                       │   Service Registry    │
+                       │   (Eureka Server)     │
+                       │     Port: 8761        │
+                       └──────────┬───────────┘
+                          ▲       ▲       ▲
+                registers │       │       │ registers
+                          │       │       │
+         ┌────────────────┘       │       └────────────────┐
+         │              registers │                        │
+         │          ┌─────────────┴──────────┐              │
+         │          │      API Gateway       │              │
+         │          │      Port: 8765        │              │
+         │          │  (Spring Cloud Gateway) │              │
+         │          └─────────────┬──────────┘              │
+         │               routes  │  routes                 │
+         │            ┌──────────┴──────────┐               │
+         │            │                     │               │
+┌────────┴───────┐    │              ┌──────┴──────────────┐
+│  Quiz Service  │◀───┘              │  Question Service   │
+│  Port: 8090    │                   │  Port: 8080         │
+│                │                   │                     │
+│  ┌──────────┐  │                   │  ┌───────────────┐  │
+│  │Controller│  │                   │  │  Controller    │  │
+│  └────┬─────┘  │                   │  └───────┬───────┘  │
+│       │        │                   │          │          │
+│  ┌────▼─────┐  │     Feign         │  ┌───────▼───────┐  │
+│  │ Service  │──╋───────────────────╋─▶│   Service     │  │
+│  └────┬─────┘  │                   │  └───────┬───────┘  │
+│       │        │                   │          │          │
+│  ┌────▼─────┐  │                   │  ┌───────▼───────┐  │
+│  │Repository│  │                   │  │  Repository   │  │
+│  └────┬─────┘  │                   │  └───────┬───────┘  │
+└───────┼────────┘                   └──────────┼──────────┘
+        │                                       │
+ ┌──────▼──────┐                        ┌───────▼───────┐
+ │ PostgreSQL  │                        │  PostgreSQL   │
+ │  (quiz_db)  │                        │ (question_db) │
+ └─────────────┘                        └───────────────┘
 ```
 
 **Service responsibilities:**
@@ -57,11 +68,15 @@ The application is decomposed into **three independently deployable services**, 
 | Service          | Port | Role                                                                                        |
 | ---------------- | ---- | ------------------------------------------------------------------------------------------- |
 | Service Registry | 8761 | Eureka Server — service registration and discovery                                          |
+| API Gateway      | 8765 | Single entry point — routes requests to downstream services via Eureka discovery             |
 | Question Service | 8080 | Manages questions (CRUD, category filtering, scoring, random selection)                     |
 | Quiz Service     | 8090 | Manages quizzes (creation, retrieval, submission) — delegates to Question Service via Feign |
 
 **Inter-service communication:**  
 Quiz Service communicates with Question Service through **OpenFeign**, a declarative REST client. Service endpoints are resolved at runtime via **Eureka service discovery** — no hardcoded URLs.
+
+**API Gateway:**  
+All client requests enter through the **Spring Cloud Gateway** on port `8765`. The gateway uses Eureka's discovery locator to automatically route requests based on the service name in the URL path — no manual route configuration needed.
 
 ---
 
@@ -73,12 +88,13 @@ The original [monolithic application](https://github.com/Prashanth291/quiz-appli
 
 | Aspect                | Monolith                                    | Microservices (this repo)                                  |
 | --------------------- | ------------------------------------------- | ---------------------------------------------------------- |
-| **Deployment**        | Single JAR                                  | 3 independent services, each with its own JAR              |
+| **Deployment**        | Single JAR                                  | 4 independent services, each with its own JAR              |
 | **Database**          | Single shared `question_db`                 | Database per service (`question_db` + `quiz_db`)           |
 | **Communication**     | In-process method calls                     | REST calls via OpenFeign                                   |
 | **Service Discovery** | N/A                                         | Netflix Eureka                                             |
 | **Quiz ↔ Question**   | Direct service-layer method invocation      | Feign client calling Question Service REST endpoints       |
 | **Quiz entity**       | Stored `List<Question>` (JPA `@ManyToMany`) | Stores `List<Integer>` question IDs (`@ElementCollection`) |
+| **Gateway**           | N/A                                         | Spring Cloud Gateway — single entry point on port 8765     |
 | **Scalability**       | Scale entire app                            | Scale individual services independently                    |
 
 ### Steps Taken
@@ -93,6 +109,8 @@ The original [monolithic application](https://github.com/Prashanth291/quiz-appli
 
 5. **Database per Service** — Split the single `question_db` into two databases: `question_db` (Question Service) and `quiz_db` (Quiz Service), enforcing data ownership boundaries.
 
+6. **Added API Gateway** — Introduced Spring Cloud Gateway as a single entry point for all client requests on port `8765`. The gateway uses Eureka's discovery locator (`spring.cloud.gateway.discovery.locator.enabled=true`) to automatically route requests to the correct service based on the service name in the URL path — eliminating the need for clients to know individual service ports.
+
 ---
 
 ## Tech Stack
@@ -103,6 +121,7 @@ The original [monolithic application](https://github.com/Prashanth291/quiz-appli
 | Framework          | Spring Boot 3.2.5            |
 | Cloud              | Spring Cloud 2023.0.1        |
 | Service Discovery  | Netflix Eureka               |
+| API Gateway        | Spring Cloud Gateway         |
 | Inter-Service Comm | OpenFeign                    |
 | Web Layer          | Spring Web MVC               |
 | Persistence        | Spring Data JPA / Hibernate  |
@@ -120,35 +139,52 @@ The original [monolithic application](https://github.com/Prashanth291/quiz-appli
 - **Quiz Retrieval** — Fetch quiz questions with answer options (correct answers excluded from response)
 - **Quiz Submission & Scoring** — Submit answers and receive a computed score
 - **Service Discovery** — Services register with and discover each other via Eureka
+- **API Gateway** — Single entry point for all client requests with automatic service routing
 - **Declarative REST Calls** — Inter-service communication through OpenFeign
 
 ---
 
 ## REST API Endpoints
 
-### Question Service (`http://localhost:8080`)
+All client requests go through the **API Gateway** at `http://localhost:8765`. The gateway routes to downstream services using the service name as a path prefix.
 
-| Method   | Endpoint                         | Description                                             |
-| -------- | -------------------------------- | ------------------------------------------------------- |
-| `GET`    | `/questions/allQuestions`        | Get all questions                                       |
-| `GET`    | `/questions/question/{id}`       | Get a question by ID                                    |
-| `POST`   | `/questions/add-question`        | Add a new question                                      |
-| `PUT`    | `/questions/update/{id}`         | Update an existing question                             |
-| `DELETE` | `/questions/delete/{id}`         | Delete a question by ID                                 |
-| `GET`    | `/questions/category/{category}` | Get all questions in a category                         |
-| `GET`    | `/questions/generate`            | Get random question IDs (params: `category`, `numQues`) |
-| `POST`   | `/questions/getQuestions`        | Get questions by IDs (answers excluded)                 |
-| `POST`   | `/questions/get-score`           | Calculate score from submitted responses                |
+### Via API Gateway (`http://localhost:8765`)
 
-> The last three endpoints (`/generate`, `/getQuestions`, `/get-score`) are **internal endpoints** used by Quiz Service via Feign. They were introduced during the microservices decomposition.
+**Question endpoints** — prefix: `/question-service`
 
-### Quiz Service (`http://localhost:8090`)
+| Method   | Gateway URL                                              | Description                                             |
+| -------- | -------------------------------------------------------- | ------------------------------------------------------- |
+| `GET`    | `/question-service/questions/allQuestions`                | Get all questions                                       |
+| `GET`    | `/question-service/questions/question/{id}`               | Get a question by ID                                    |
+| `POST`   | `/question-service/questions/add-question`                | Add a new question                                      |
+| `PUT`    | `/question-service/questions/update/{id}`                 | Update an existing question                             |
+| `DELETE` | `/question-service/questions/delete/{id}`                 | Delete a question by ID                                 |
+| `GET`    | `/question-service/questions/category/{category}`         | Get all questions in a category                         |
 
-| Method | Endpoint              | Description                                        |
-| ------ | --------------------- | -------------------------------------------------- |
-| `POST` | `/quiz/create`        | Create a quiz (body: `{category, numQues, title}`) |
-| `GET`  | `/quiz/get-quiz/{id}` | Get quiz questions (answers excluded)              |
-| `POST` | `/quiz/submit/{id}`   | Submit responses and get score                     |
+**Quiz endpoints** — prefix: `/quiz-service`
+
+| Method | Gateway URL                              | Description                                        |
+| ------ | ---------------------------------------- | -------------------------------------------------- |
+| `POST` | `/quiz-service/quiz/create`              | Create a quiz (body: `{category, numQues, title}`) |
+| `GET`  | `/quiz-service/quiz/get-quiz/{id}`       | Get quiz questions (answers excluded)              |
+| `POST` | `/quiz-service/quiz/submit/{id}`         | Submit responses and get score                     |
+
+> The gateway uses Eureka discovery locator — the service name prefix (`question-service` / `quiz-service`) is stripped and the remainder is forwarded to the actual service.
+
+### Direct Service Endpoints (internal)
+
+| Service          | Base URL                    | Notes                                         |
+| ---------------- | --------------------------- | --------------------------------------------- |
+| Question Service | `http://localhost:8080`     | Direct access (bypasses gateway)              |
+| Quiz Service     | `http://localhost:8090`     | Direct access (bypasses gateway)              |
+
+**Question Service internal endpoints** (used by Quiz Service via Feign):
+
+| Method | Endpoint                 | Description                                             |
+| ------ | ------------------------ | ------------------------------------------------------- |
+| `GET`  | `/questions/generate`    | Get random question IDs (params: `category`, `numQues`) |
+| `POST` | `/questions/getQuestions` | Get questions by IDs (answers excluded)                 |
+| `POST` | `/questions/get-score`   | Calculate score from submitted responses                |
 
 ---
 
@@ -160,6 +196,12 @@ quiz-application-microservice/
 │   ├── pom.xml
 │   └── src/main/
 │       ├── java/.../ServiceRegistryApplication.java
+│       └── resources/application.properties
+│
+├── api-gateway/                             # Spring Cloud Gateway
+│   ├── pom.xml
+│   └── src/main/
+│       ├── java/.../ApiGatewayApplication.java
 │       └── resources/application.properties
 │
 ├── question-service/                        # Question microservice
@@ -256,6 +298,13 @@ cd service-registry
 ./mvnw spring-boot:run
 ```
 
+**Start API Gateway:**
+
+```bash
+cd api-gateway
+./mvnw spring-boot:run
+```
+
 **Start Question Service:**
 
 ```bash
@@ -274,9 +323,10 @@ cd quiz-service
 
 ### 4. Verify
 
-- Eureka Dashboard: `http://localhost:8761`
-- Question Service: `http://localhost:8080/questions/allQuestions`
-- Quiz Service: `http://localhost:8090/quiz/get-quiz/1`
+- Eureka Dashboard: `http://localhost:8761` (all 3 services registered)
+- API Gateway: `http://localhost:8765/quiz-service/quiz/get-quiz/1`
+- Question Service (direct): `http://localhost:8080/questions/allQuestions`
+- Quiz Service (direct): `http://localhost:8090/quiz/get-quiz/1`
 
 ---
 
@@ -284,25 +334,25 @@ cd quiz-service
 
 ### Eureka Dashboard
 
-`http://localhost:8761` — Both services registered and running:
+`http://localhost:8761` — All three services (API Gateway, Question Service, Quiz Service) registered and running:
 
 ![Eureka Dashboard](screenshots/Eureka.png)
 
 ### Create Quiz
 
-`POST /quiz/create`
+`POST http://localhost:8765/quiz-service/quiz/create`
 
 ![Create Quiz](screenshots/createQuiz.png)
 
 ### Get Quiz Questions
 
-`GET /quiz/get-quiz/{id}`
+`GET http://localhost:8765/quiz-service/quiz/get-quiz/{id}`
 
 ![Get Questions From Id](screenshots/getQuestionsFromId.png)
 
 ### Submit Quiz & Calculate Score
 
-`POST /quiz/submit/{id}`
+`POST http://localhost:8765/quiz-service/quiz/submit/{id}`
 
 ![Calculate Score](screenshots/calculateScore.png)
 
@@ -330,21 +380,24 @@ public interface QuizInterface {
 }
 ```
 
-**Request flow for quiz creation:**
+**Request flow for quiz creation (via API Gateway):**
 
 ```
-Client                    Quiz Service                  Question Service
-  │                            │                              │
-  │  POST /quiz/create         │                              │
-  │ ─────────────────────────▶ │                              │
-  │                            │  GET /questions/generate     │
-  │                            │ ────────────────────────────▶│
-  │                            │     List<Integer> (IDs)      │
-  │                            │ ◀────────────────────────────│
-  │                            │                              │
-  │                            │  saves Quiz(title, IDs)      │
-  │      "SUCCESS"             │  to quiz_db                  │
-  │ ◀───────────────────────── │                              │
+Client                 API Gateway              Quiz Service              Question Service
+  │                       │                          │                          │
+  │  POST /quiz-service/  │                          │                          │
+  │       quiz/create     │                          │                          │
+  │ ─────────────────────▶│  POST /quiz/create       │                          │
+  │                       │ ────────────────────────▶│                          │
+  │                       │                          │  GET /questions/generate │
+  │                       │                          │ ────────────────────────▶│
+  │                       │                          │    List<Integer> (IDs)   │
+  │                       │                          │ ◀────────────────────────│
+  │                       │                          │                          │
+  │                       │                          │  saves Quiz(title, IDs)  │
+  │                       │       "SUCCESS"          │  to quiz_db              │
+  │       "SUCCESS"       │ ◀────────────────────────│                          │
+  │ ◀─────────────────────│                          │                          │
 ```
 
 ---
@@ -353,10 +406,11 @@ Client                    Quiz Service                  Question Service
 
 | Concern           | Monolith                            | Microservices (this repo)                    |
 | ----------------- | ----------------------------------- | -------------------------------------------- |
-| Deployment        | Single JAR                          | 3 independent JARs                           |
+| Deployment        | Single JAR                          | 4 independent JARs                           |
 | Database          | Single shared PostgreSQL DB         | Database per service                         |
 | Communication     | In-process method calls             | REST calls via OpenFeign                     |
 | Service Discovery | N/A                                 | Netflix Eureka                               |
+| Gateway           | N/A                                 | Spring Cloud Gateway (port 8765)             |
 | Coupling          | Tight — all modules share a process | Loose — services interact via REST contracts |
 | Scalability       | Scale everything together           | Scale individual services independently      |
 | Fault Isolation   | Single point of failure             | Failure in one service doesn't crash others  |
